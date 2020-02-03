@@ -1,8 +1,9 @@
 import logging
 import re
-from urllib.parse import urlparse, urljoin
-import lxml.html
+from urllib.parse import urlparse
+
 from bs4 import BeautifulSoup
+
 logger = logging.getLogger(__name__)
 
 class Crawler:
@@ -58,8 +59,37 @@ class Crawler:
         in this method
         """
         parsed = urlparse(url)
+        print(parsed)
         if parsed.scheme not in set(["http", "https"]):
             return False
+
+        #Empty URLS
+        if parsed is None or parsed == "":
+            return False
+
+        #Avoid calendars
+        if "calendar" in parsed.path:
+            return False
+
+        #Long URLS
+        if len(url.strip(".").strip("/")) > 300:
+            return False
+
+        #Repeating Subdirs - Valid URLS generally do not have repeating directories
+        subdirs = {}
+        for x in parsed.path:
+            subdirs[x] += 1
+        for x in subdirs.keys():
+            if subdirs[x] > 1:
+                return False
+
+        #Query Parameters - Infinite URLs
+        queries = {}
+        for x in parsed.query:
+            queries[x] += 1
+        if len(queries) > 3:
+            return False
+
         try:
             return ".ics.uci.edu" in parsed.hostname \
                    and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
@@ -71,4 +101,3 @@ class Crawler:
         except TypeError:
             print("TypeError for ", parsed)
             return False
-
