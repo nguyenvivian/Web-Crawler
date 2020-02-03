@@ -1,7 +1,8 @@
 import logging
 import re
-from urllib.parse import urlparse
-
+from urllib.parse import urlparse, urljoin
+import lxml.html
+from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 class Crawler:
@@ -19,6 +20,7 @@ class Crawler:
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
         the scraped links to the frontier
         """
+        print ("hi")
         while self.frontier.has_next_url():
             url = self.frontier.get_next_url()
             logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
@@ -40,6 +42,13 @@ class Crawler:
         Suggested library: lxml
         """
         outputLinks = []
+        soup = BeautifulSoup(url_data["content"], "lxml")
+        identifiers = soup.find_all('a')
+        for tag in identifiers:
+            link = tag.get('href')
+            if urlparse(link).netloc is False:
+                outputLinks.append(url_data["url"],link) # If the link is relative
+            else: outputLinks.append(link) # If the link is absoulute
         return outputLinks
 
     def is_valid(self, url):
