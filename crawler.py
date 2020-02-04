@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse, parse_qsl, parse_qs
+from urllib.parse import urlparse, parse_qsl, urljoin
 
 from bs4 import BeautifulSoup
 
@@ -15,13 +15,12 @@ class Crawler:
     def __init__(self, frontier, corpus):
         self.frontier = frontier
         self.corpus = corpus
-
+        self.DynamicURLs = dict()
     def start_crawling(self):
         """
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
         the scraped links to the frontier
         """
-        print ("hi")
         while self.frontier.has_next_url():
             url = self.frontier.get_next_url()
             logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
@@ -46,11 +45,12 @@ class Crawler:
         soup = BeautifulSoup(url_data["content"], "lxml")
         identifiers = soup.find_all('a')
         for tag in identifiers:
-            link = tag.get('href')
-            if urlparse(link).netloc is False:
-                outputLinks.append(url_data["url"],link) # If the link is relative
+            link = tag.get('href') # gets all the href links
+            if type(link) != None:
+                outputLinks.append(urljoin(url_data["url"], link)) # If the link is relative
             else: outputLinks.append(link) # If the link is absoulute
         return outputLinks
+
 
     def is_valid(self, url):
         """
@@ -77,6 +77,16 @@ class Crawler:
             # traps.add(url)
             return False
 
+        #Avoid dynamic URLs
+        static_link = url.split('?')[0]
+        if static_link not in self.DynamicURLs:
+            self.DynamicURLs[static_link] = 1
+        else: self.DynamicURLs[static_link] += 1
+
+        if self.DynamicURLs[static_link] > 700:
+            return False
+
+
         #Long URLS
         if len(url.strip(".").strip("/")) > 300:
             # traps.add(url)
@@ -93,12 +103,6 @@ class Crawler:
             # traps.add(url)
             return False
 
-        # # Repeating query parameters
-        # queryParams = parse_qs(parsed.query)
-        # for param in queryParams.values():
-        #     if len(param) > 1:
-        #         # traps.add(url)
-        #         return False
 
         try:
             return ".ics.uci.edu" in parsed.hostname \
