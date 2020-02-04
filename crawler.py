@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse, parse_qsl, urljoin
+from urllib.parse import urlparse, parse_qsl, urljoin, parse_qs
 
 from bs4 import BeautifulSoup
 
@@ -103,12 +103,30 @@ class Crawler:
             traps.add(url)
             return False
 
+        # Anchor traps
+        if "#" in url:
+            return False
+
         # Repeating query parameters
         queryParams = parse_qs(parsed.query)
-        for param in queryParams.values():
-            if len(param) > 1:
-                traps.add(url)
-                return False
+        if len(queryParams.keys()) > 2:
+            traps.add(url)
+            return False
+
+       # Same root path/webpage, different content
+        rootPathDict = {} #root path = key, full path = value
+        #if key is same and full path is diff, return false
+        #else pop that root path stack implementation using a dict
+        rootPathDict[tuple(subdirList[:-1])] = subdirList
+        #if next root path is same as last root path and full path is not = the the full path
+        if tuple(subdirList[:-1]) in rootPathDict.keys() and subdirList != rootPathDict[tuple(subdirList[:-1])]:
+            return False
+
+        #dict[key = path, value = dict[key = param, value = param value]
+        #if kley and key[paramn] are same but value is diff
+
+        #same path, same query, different query value
+        print(parsed)
 
         try:
             return ".ics.uci.edu" in parsed.hostname \
