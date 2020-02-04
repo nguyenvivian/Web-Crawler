@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl, parse_qs
 
 from bs4 import BeautifulSoup
 
@@ -59,36 +59,46 @@ class Crawler:
         in this method
         """
         parsed = urlparse(url)
-        print(parsed)
+        # traps = set()
+        # if url in traps:
+        #     return False
+
         if parsed.scheme not in set(["http", "https"]):
+            # traps.add(url)
             return False
 
         #Empty URLS
         if parsed is None or parsed == "":
+            # traps.add(url)
             return False
 
         #Avoid calendars
         if "calendar" in parsed.path:
+            # traps.add(url)
             return False
 
         #Long URLS
         if len(url.strip(".").strip("/")) > 300:
+            # traps.add(url)
             return False
 
-        #Repeating Subdirs - Valid URLS generally do not have repeating directories
-        subdirs = {}
-        for x in parsed.path:
-            subdirs[x] += 1
-        for x in subdirs.keys():
-            if subdirs[x] > 1:
-                return False
-
-        #Query Parameters - Infinite URLs
-        queries = {}
-        for x in parsed.query:
-            queries[x] += 1
-        if len(queries) > 3:
+        # Continuously repeating subdirectories
+        subdirSet = set(parsed.path.split("/"))
+        subdirList = list(parsed.path.split("/"))
+        while "" in subdirList:
+            subdirList.remove("")
+        while "" in subdirSet:
+            subdirSet.remove("")
+        if len(subdirSet) != len(subdirList):
+            # traps.add(url)
             return False
+
+        # # Repeating query parameters
+        # queryParams = parse_qs(parsed.query)
+        # for param in queryParams.values():
+        #     if len(param) > 1:
+        #         # traps.add(url)
+        #         return False
 
         try:
             return ".ics.uci.edu" in parsed.hostname \
