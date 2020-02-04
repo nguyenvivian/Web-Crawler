@@ -59,22 +59,22 @@ class Crawler:
         in this method
         """
         parsed = urlparse(url)
-        # traps = set()
-        # if url in traps:
-        #     return False
+        traps = set()
+        if url in traps:
+            return False
 
         if parsed.scheme not in set(["http", "https"]):
-            # traps.add(url)
+            traps.add(url)
             return False
 
         #Empty URLS
         if parsed is None or parsed == "":
-            # traps.add(url)
+            traps.add(url)
             return False
 
         #Avoid calendars
         if "calendar" in parsed.path:
-            # traps.add(url)
+            traps.add(url)
             return False
 
         #Avoid dynamic URLs
@@ -89,7 +89,7 @@ class Crawler:
 
         #Long URLS
         if len(url.strip(".").strip("/")) > 300:
-            # traps.add(url)
+            traps.add(url)
             return False
 
         # Continuously repeating subdirectories
@@ -100,9 +100,15 @@ class Crawler:
         while "" in subdirSet:
             subdirSet.remove("")
         if len(subdirSet) != len(subdirList):
-            # traps.add(url)
+            traps.add(url)
             return False
 
+        # Repeating query parameters
+        queryParams = parse_qs(parsed.query)
+        for param in queryParams.values():
+            if len(param) > 1:
+                traps.add(url)
+                return False
 
         try:
             return ".ics.uci.edu" in parsed.hostname \
