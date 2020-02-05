@@ -1,7 +1,7 @@
 import logging
 import re
 from urllib.parse import urlparse, parse_qsl, urljoin, parse_qs
-
+import tokenize
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ class Crawler:
             if type(link) != None:
                 outputLinks.append(urljoin(url_data["url"], link)) # If the link is relative
             else: outputLinks.append(link) # If the link is absoulute
+
+        """page = gettext(url_data)
+        pagewords = page.split()
+        matching_pgwords = [word for word in pagewords ]"""
 
         # keeps track of all the valid outlinks
         if len(outputLinks) > self.MAXoutLinks[1]:
@@ -158,3 +162,16 @@ class Crawler:
         except TypeError:
             print("TypeError for ", parsed)
             return False
+
+    # referenced from: https://matix.io/extract-text-from-webpage-using-beautifulsoup-and-python/
+    def gettext(self,url_data):
+        soup = BeautifulSoup(url_data["content"], "lxml")
+        text = soup.find_all(text=True)
+
+        out = ''
+        black = ['[document]', 'noscript', 'header', 'html', 'meta', 'head', 'input', 'script', 'style', 'div', 'a',
+                 'img']
+        for t in text:
+            if t.parent.name not in black and not re.match('<!-- .* -->', str(t.encode('utf-8'))):
+                out += '{} '.format(t)
+        return out
