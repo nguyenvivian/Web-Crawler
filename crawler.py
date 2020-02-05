@@ -4,6 +4,14 @@ from urllib.parse import urlparse, parse_qsl, urljoin, parse_qs
 
 from bs4 import BeautifulSoup
 
+
+prevURLFlag = False
+subdomainCount = 0
+prevURL = ""
+prevPath = ""
+
+
+
 logger = logging.getLogger(__name__)
 
 class Crawler:
@@ -59,6 +67,16 @@ class Crawler:
         in this method
         """
         parsed = urlparse(url)
+        global prevURLFlag
+        global subdomainCount
+        global prevURL
+        global prevPath
+
+
+        currURL = parsed.netloc # temp value
+
+
+
         traps = set()
         if url in traps:
             return False
@@ -128,6 +146,28 @@ class Crawler:
         #same path, same query, different query value
         print(parsed)
 
+
+        # Analytics 1
+        if prevURLFlag != True: # if its the first time executing this function then save the domain
+                prevURL = parsed.netloc
+                prevPath = parsed.path 
+        if prevURLFlag == True: # if this is not the first time executing this function then compare prev an curr url's
+            currURL = parsed.netloc # assign curr url
+            currPath = parsed.path
+            if currURL == prevURL and prevPath != currPath: # compare
+                    subdomainCount += 1 # since prev and curr url domains are the same, and duplication is already checked in frontier, these are diff subdomains, add 1      
+            prevURL = currURL
+            prevPath = currPath
+
+        prevURLFlag = True # assign true to compare url's on next iteration
+
+        print("the subdomain count is: ")
+        print(subdomainCount) # need to define subdomaincount = 0 somewhere ---
+
+
+
+
+
         try:
             return ".ics.uci.edu" in parsed.hostname \
                    and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
@@ -139,3 +179,7 @@ class Crawler:
         except TypeError:
             print("TypeError for ", parsed)
             return False
+
+
+
+
