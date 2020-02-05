@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse, parse_qsl, urljoin
+from urllib.parse import urlparse, parse_qsl, urljoin, parse_qs
 
 from bs4 import BeautifulSoup
 
@@ -16,6 +16,8 @@ class Crawler:
         self.frontier = frontier
         self.corpus = corpus
         self.DynamicURLs = dict()
+        self.subdomainCount = dict()
+        self.MAXoutLinks = ('',0)
     def start_crawling(self):
         """
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
@@ -49,6 +51,10 @@ class Crawler:
             if type(link) != None:
                 outputLinks.append(urljoin(url_data["url"], link)) # If the link is relative
             else: outputLinks.append(link) # If the link is absoulute
+
+        # keeps track of all the valid outlinks
+        if len(outputLinks) > self.MAXoutLinks[1]:
+            self.MAXoutLinks = (url_data["url"], len(outputLinks))
         return outputLinks
 
 
@@ -62,6 +68,11 @@ class Crawler:
         traps = set()
         if url in traps:
             return False
+
+        # Counts number of links per subdomain
+        if parsed.netloc not in self.subdomainCount:
+            self.subdomainCount[parsed.netloc] = 1
+        else: self.subdomainCount[parsed.netloc] += 1
 
         if parsed.scheme not in set(["http", "https"]):
             traps.add(url)
