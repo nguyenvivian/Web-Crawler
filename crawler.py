@@ -16,6 +16,8 @@ class Crawler:
         self.frontier = frontier
         self.corpus = corpus
         self.DynamicURLs = dict()
+        self.queryStack = dict()
+
     def start_crawling(self):
         """
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
@@ -51,7 +53,6 @@ class Crawler:
             else: outputLinks.append(link) # If the link is absoulute
         return outputLinks
 
-
     def is_valid(self, url):
         """
         Function returns True or False based on whether the url has to be fetched or not. This is a great place to
@@ -60,6 +61,8 @@ class Crawler:
         """
         parsed = urlparse(url)
         traps = set()
+
+        # Trap counter, History-based detection
         if url in traps:
             return False
 
@@ -67,27 +70,27 @@ class Crawler:
             traps.add(url)
             return False
 
-        #Empty URLS
+        # Empty URLS
         if parsed is None or parsed == "":
             traps.add(url)
             return False
 
-        #Avoid calendars
+        # Avoid calendars
         if "calendar" in parsed.path:
             traps.add(url)
             return False
 
-        #Avoid dynamic URLs
+        # Avoid dynamic URLs
         static_link = url.split('?')[0]
         if static_link not in self.DynamicURLs:
             self.DynamicURLs[static_link] = 1
-        else: self.DynamicURLs[static_link] += 1
-
+        else:
+            self.DynamicURLs[static_link] += 1
         if self.DynamicURLs[static_link] > 700:
+            traps.add(url)
             return False
 
-
-        #Long URLS
+        # Long URLS
         if len(url.strip(".").strip("/")) > 300:
             traps.add(url)
             return False
@@ -105,28 +108,39 @@ class Crawler:
 
         # Anchor traps
         if "#" in url:
+            traps.add(url)
             return False
 
         # Repeating query parameters
         queryParams = parse_qs(parsed.query)
         if len(queryParams.keys()) > 2:
             traps.add(url)
+            traps.add(url)
             return False
 
-       # Same root path/webpage, different content
-        rootPathDict = {} #root path = key, full path = value
-        #if key is same and full path is diff, return false
-        #else pop that root path stack implementation using a dict
-        rootPathDict[tuple(subdirList[:-1])] = subdirList
-        #if next root path is same as last root path and full path is not = the the full path
+        # Same root path/webpage, different content
+        # root path = key, full path = value
+        # if key is same and full path is diff, return false
+        # else pop that root path stack implementation using a dict
+        rootPathDict = {tuple(subdirList[:-1]): subdirList}
+        # if next root path is same as last root path and full path is not = the the full path
         if tuple(subdirList[:-1]) in rootPathDict.keys() and subdirList != rootPathDict[tuple(subdirList[:-1])]:
+            traps.add(url)
             return False
+        else:
+            rootPathDict.clear()
 
-        #dict[key = path, value = dict[key = param, value = param value]
-        #if kley and key[paramn] are same but value is diff
-
-        #same path, same query, different query value
-        print(parsed)
+        #Same netloc, same query parameter, different query value
+        if parsed.query != "" and len(list(queryParams.keys())):
+            print(parsed)
+            uniqueParam = list(queryParams.keys())[0]
+            if len(self.queryStack) == 0:
+                self.queryStack[uniqueParam] = queryParams[uniqueParam]
+            if list(self.queryStack.keys())[0] == uniqueParam and queryParams.get(uniqueParam) != self.queryStack[uniqueParam]:
+                traps.add(url)
+                return False
+            elif list(self.queryStack.keys())[0] != uniqueParam:
+                self.queryStack.clear()
 
         try:
             return ".ics.uci.edu" in parsed.hostname \
