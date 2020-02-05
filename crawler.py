@@ -17,6 +17,7 @@ class Crawler:
         self.corpus = corpus
         self.DynamicURLs = dict()
         self.queryStack = dict()
+        self.MAXoutLinks = ('',0)
 
     def start_crawling(self):
         """
@@ -51,6 +52,10 @@ class Crawler:
             if type(link) != None:
                 outputLinks.append(urljoin(url_data["url"], link)) # If the link is relative
             else: outputLinks.append(link) # If the link is absoulute
+
+        # keeps track of all the valid outlinks
+        if len(outputLinks) > self.MAXoutLinks[1]:
+            self.MAXoutLinks = (url_data["url"], len(outputLinks))
         return outputLinks
 
     def is_valid(self, url):
