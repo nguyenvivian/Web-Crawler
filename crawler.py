@@ -16,7 +16,6 @@ class Crawler:
         self.frontier = frontier
         self.corpus = corpus
         self.DynamicURLs = dict()
-        self.subdomainCount = dict()
         self.MAXoutLinks = ('',0)
     def start_crawling(self):
         """
@@ -68,11 +67,6 @@ class Crawler:
         traps = set()
         if url in traps:
             return False
-
-        # Counts number of links per subdomain
-        if parsed.netloc not in self.subdomainCount:
-            self.subdomainCount[parsed.netloc] = 1
-        else: self.subdomainCount[parsed.netloc] += 1
 
         if parsed.scheme not in set(["http", "https"]):
             traps.add(url)
