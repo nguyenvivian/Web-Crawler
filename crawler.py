@@ -16,6 +16,7 @@ class Crawler:
         self.frontier = frontier
         self.corpus = corpus
         self.DynamicURLs = dict()
+        self.MAXoutLinks = ('',0)
     def start_crawling(self):
         """
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
@@ -49,6 +50,10 @@ class Crawler:
             if type(link) != None:
                 outputLinks.append(urljoin(url_data["url"], link)) # If the link is relative
             else: outputLinks.append(link) # If the link is absoulute
+
+        # keeps track of all the valid outlinks
+        if len(outputLinks) > self.MAXoutLinks[1]:
+            self.MAXoutLinks = (url_data["url"], len(outputLinks))
         return outputLinks
 
 
