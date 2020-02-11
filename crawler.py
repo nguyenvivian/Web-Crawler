@@ -1,6 +1,7 @@
 # Benjamin Huynh 18686357
 # Sergei Danielian 40124849
 # Vivian Nguyen 84955920
+
 import logging
 import re
 from urllib.parse import urlparse, parse_qsl, urljoin, parse_qs
@@ -86,18 +87,18 @@ class Crawler:
 
         with open('longestPage.txt', 'w+') as file:
             file.write("The longest page is ")
-            file.write(longestPageLink)
+            file.write(self.longestPageLink)
             file.write("with ")
-            file.write(str(longestPageCount))
+            file.write(str(self.longestPageCount))
             file.write(" amount of words.")
+        file.close()
 
         # analytics 5 -
         # loop through wordsDict and count the number of words
         sortedWordSet = sorted(self.wordsDict.items(), key = lambda kv: (kv[1]), reverse= True)
 
-
         with open('MostCommonWords.txt', 'w') as file:
-            for x in range(50):
+            for x in range(1,50):
                 file.write(sortedWordSet[x][0])
                 file.write("\n")
         file.close()
@@ -122,7 +123,6 @@ class Crawler:
                 outputLinks.append(urljoin(url_data["url"], link))  # If the link is relative
             else:
                 outputLinks.append(link)  # If the link is absoulute
-
         """page = gettext(url_data)
         pagewords = page.split()
         matching_pgwords = [word for word in pagewords ]"""
@@ -130,8 +130,25 @@ class Crawler:
         # keeps track of all the valid outlinks
         if len(outputLinks) > self.MAXoutLinks[1]:
             self.MAXoutLinks = (url_data["url"], len(outputLinks))
-        return outputLinks
 
+        # analytics 4
+        wordset = self.gettext(soup)  # or should it be self.wordsDict[parsed.path] = gettext(url) ???????
+        wordSum = sum(wordset.values())
+        if (wordSum > self.longestPageCount):
+            self.longestPageCount = wordSum
+            self.longestPageLink = url_data["url"]
+
+        # analytics 5
+        sortedWordSet = sorted(wordset.items(), key = lambda kv: (kv[1]), reverse= True)
+
+        for x in sortedWordSet:
+            if x[0] not in self.stopWords:
+                if x[0] not in self.wordsDict:
+                    self.wordsDict[x[0]] = x[1]
+                else:
+                    self.wordsDict[x[0]] += x[1]
+
+        return outputLinks
     def is_valid(self, url):
         """
         Function returns True or False based on whether the url has to be fetched or not. This is a great place to
@@ -227,25 +244,6 @@ class Crawler:
             elif list(self.queryStack.keys())[0] != uniqueParam:
                 self.queryStack.clear()
 
-        # analytics 4
-        wordset = self.gettext(url)  # or should it be self.wordsDict[parsed.path] = gettext(url) ???????
-        wordSum = sum(wordset.values())
-        if (wordSum > self.longestPageCount):
-            self.longestPageCount = wordSum
-            self.longestPageLink = url
-
-        # analytics 5
-        sortedWordSet = sorted(wordset.items(), key = lambda kv: (kv[1]), reverse= True)
-        count = 0
-        keyCount = 0
-
-        for x in sortedWordSet:
-            if x[0] not in self.stopWords:
-                if x[0] not in self.wordsDict:
-                    self.wordsDict[x[0]] = x[1]
-                else:
-                    self.wordsDict[x[0]] += x[1]
-
         try:
             return ".ics.uci.edu" in parsed.hostname \
                    and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
@@ -260,20 +258,14 @@ class Crawler:
 
 
     # referenced from: https://matix.io/extract-text-from-webpage-using-beautifulsoup-and-python/
-    def gettext(self, url):
+    def gettext(self, soup):
         wordCounter = dict()
-        res = requests.get(url)
-        html_page = res.content
-        soup = BeautifulSoup(html_page, 'html.parser')
-        text = soup.find_all(text=True)
+        text = soup.get_text()
 
-        out = ''
+
         black = ['[document]', 'noscript', 'header', 'html', 'meta', 'head', 'input', 'script', 'style', 'div', 'a',
                  'img']
-        for t in text:
-            if t.parent.name not in black and not re.match('<!-- .* -->', str(t.encode('utf-8'))):
-                out += '{} '.format(t)
-
+        out = text
         out = out.replace(" - ", ' ')  # replaces punctuation # might need to do
         out = out.replace(" . ", ' ')  # replaces punctuation
         out = out.replace(" ! ", ' ')  # replaces punctuation
@@ -283,12 +275,12 @@ class Crawler:
         # replace any other puntuation thats not a-z 0-9 and is surrounded by white spaces. Ex: "hello - there " - > "hello  there"
 
         wordlist = out.split()  # split by whitespace
+        webwords = [word.lower() for word in wordlist if re.match(r'^(\"|\()?\w+(\?|\.|\!|\)|\")?(\"|\))?$',word)]
         for word in wordlist:
             if word not in wordCounter:
                 wordCounter[word] = 1
             else:
                 wordCounter[word] += 1
-
         # assign to dictionary with the key URL and the value as the wordCounter
 
         return wordCounter  # returns the numbe of words on this url to a dictionary, then use max() on that dict
